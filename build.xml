@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="yunba-java" default="build">
+	<property name="dist.dir" value="dist" />
+	<property name="build.dir" value="build" />
+
+    <property
+        name="libs"
+        value="libs" />
+	<property name="mqtt.dir" value="src/org/eclipse/paho/client/mqttv3" />
+
+	<property name="nls.dir" value="${mqtt.dir}/internal/nls" />
+
+	<property name="build.classes.dir" value="${build.dir}/classes" />
+
+	<property name="mqtt.class.nls.dir"
+		value="${build.classes.dir}/org/eclipse/paho/client/mqttv3/internal/nls" />
+	<target name="init">
+
+		<delete dir="${build.dir}" />
+
+		<delete dir="${dist.dir}" />
+
+		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.classes.dir}" />
+
+		<mkdir dir="${mqtt.class.nls.dir}" />
+
+		<mkdir dir="${dist.dir}" />
+
+	</target>
+	<target name="copy-nls">
+
+		<mkdir dir="${mqtt.class.nls.dir}" />
+
+		<copydir dest="${mqtt.class.nls.dir}" src="${nls.dir}" />
+	</target>
+	<target name="compile" depends="init,copy-nls, unzip">
+
+		<javac destdir="${build.classes.dir}"
+			srcdir="src">
+
+			<compilerarg line="-encoding UTF-8" />
+			<classpath refid="project.javac.classpath"/>  
+		</javac>
+	</target>
+<path id="project.javac.classpath">
+     <pathelement location="${external-lib}/jettison-1.1.jar"></pathelement>
+
+</path>
+	<target name="unzip">
+		<unzip dest="${build.classes.dir}" src="libs/jettison-1.1.jar" />
+		</target>
+	
+	 <target
+        name="sdkjar"
+        depends="compile" >
+
+        
+
+        <jar destfile="${dist.dir}/yunba-java-sdk.jar" >
+
+            <fileset dir="${build.classes.dir}" />
+        </jar>
+    </target>
+    
+</project>
