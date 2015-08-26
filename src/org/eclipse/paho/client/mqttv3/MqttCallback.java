@@ -60,6 +60,10 @@ public interface MqttCallback {
 	 */
 	public void messageArrived(String topic, MqttMessage message) throws Exception;
 	
+	
+	
+	public void presenceMessageArrived(String topic, MqttMessage message) throws Exception;
+	
 	/**
 	 * Called when delivery for a message has been completed, and all 
 	 * acknowledgements have been received. For QOS 0 messages it is 

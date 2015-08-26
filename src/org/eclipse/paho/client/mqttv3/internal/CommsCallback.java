@@ -12,6 +12,7 @@
 package org.eclipse.paho.client.mqttv3.internal;
 
 
+
 import java.util.Vector;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -24,6 +25,7 @@ import org.eclipse.paho.client.mqttv3.internal.wire.MqttPubComp;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttPublish;
 import org.eclipse.paho.client.mqttv3.logging.Logger;
 import org.eclipse.paho.client.mqttv3.logging.LoggerFactory;
+import org.eclipse.paho.util.MqttUtil;
 
 /**
  * Bridge between Receiver and the external API. This class gets called by
@@ -45,7 +47,8 @@ public class CommsCallback implements Runnable {
 	private ClientState clientState;
 
 	final static String className = "CommsCallback";
-	Logger log = LoggerFactory.getLogger(LoggerFactory.MQTT_CLIENT_MSG_CAT,	className);
+	Logger log = LoggerFactory.getLogger(LoggerFactory.MQTT_CLIENT_MSG_CAT,
+			className);
 
 	CommsCallback(ClientComms clientComms) {
 		this.clientComms = clientComms;
@@ -78,8 +81,7 @@ public class CommsCallback implements Runnable {
 	}
 
 	/**
-	 * Stops the callback thread. 
-	 * This call will block until stop has completed.
+	 * Stops the callback thread. This call will block until stop has completed.
 	 */
 	public void stop() {
 		final String methodName = "stop";
@@ -108,17 +110,17 @@ public class CommsCallback implements Runnable {
 		}
 	}
 
-	//force destory the thread
+	// force destory the thread
 	public void destory() {
 		running = false;
 		try {
 			callbackThread.interrupt();
 		} catch (Exception e) {
-		//	YLogger.e("CommsCallback","destory",  e);
+			// YLogger.e("CommsCallback","destory", e);
 		}
 		callbackThread = null;
 	}
-	
+
 	public void setCallback(MqttCallback mqttCallback) {
 		this.mqttCallback = mqttCallback;
 	}
@@ -127,7 +129,8 @@ public class CommsCallback implements Runnable {
 		final String methodName = "run";
 		while (running) {
 			try {
-				// If no work is currently available, then wait until there is some...
+				// If no work is currently available, then wait until there is
+				// some...
 				try {
 					synchronized (workAvailable) {
 						if (running & messageQueue.isEmpty()
@@ -144,11 +147,12 @@ public class CommsCallback implements Runnable {
 					// Check for deliveryComplete callbacks...
 					if (!completeQueue.isEmpty()) {
 						// First call the delivery arrived callback if needed
-						MqttToken token = (MqttToken) completeQueue.elementAt(0);
+						MqttToken token = (MqttToken) completeQueue
+								.elementAt(0);
 						handleActionComplete(token);
 						completeQueue.removeElementAt(0);
 					}
-					
+
 					// Check for messageArrived callbacks...
 					if (!messageQueue.isEmpty()) {
 						// Note, there is a window on connect where a publish
@@ -185,35 +189,34 @@ public class CommsCallback implements Runnable {
 		}
 	}
 
-	private void handleActionComplete(MqttToken token)
-			throws MqttException {
+	private void handleActionComplete(MqttToken token) throws MqttException {
 		final String methodName = "handleActionComplete";
 		synchronized (token) {
 			// @TRACE 705=callback and notify for key={0}
-			//log.fine(className, methodName, "705",	new Object[] { token.internalTok.getKey() });
-		//	YLogger.d(className, methodName);
+			// log.fine(className, methodName, "705", new Object[] {
+			// token.internalTok.getKey() });
+			// YLogger.d(className, methodName);
 			// Unblock any waiters and if pending complete now set completed
 			token.internalTok.notifyComplete();
-			
- 			if (!token.internalTok.isNotified()) {
- 				// If a callback is registered and delivery has finished 
- 				// call delivery complete callback. 
-				if ( mqttCallback != null 
-					&& token instanceof MqttDeliveryToken 
-					&& token.isComplete()) {
-						mqttCallback.deliveryComplete((MqttDeliveryToken) token);
+
+			if (!token.internalTok.isNotified()) {
+				// If a callback is registered and delivery has finished
+				// call delivery complete callback.
+				if (mqttCallback != null && token instanceof MqttDeliveryToken
+						&& token.isComplete()) {
+					mqttCallback.deliveryComplete((MqttDeliveryToken) token);
 				}
 				// Now call async action completion callbacks
 				fireActionEvent(token);
 			}
-			
+
 			// Set notified so we don't tell the user again about this action.
-			if ( token instanceof MqttDeliveryToken && token.isComplete()) {
+			if (token instanceof MqttDeliveryToken && token.isComplete()) {
 				token.internalTok.setNotified(true);
 			}
 
 			if (token.isComplete()) {
-				// Finish by doing any post processing such as delete 
+				// Finish by doing any post processing such as delete
 				// from persistent store but only do so if the action
 				// is complete
 				clientState.notifyComplete(token);
@@ -228,7 +231,8 @@ public class CommsCallback implements Runnable {
 	 * shutdown e.g. receiver or sender thread. If the request was a user
 	 * initiated disconnect then the disconnect token will be notified.
 	 * 
-	 * @param cause  the reason behind the loss of connection.
+	 * @param cause
+	 *            the reason behind the loss of connection.
 	 */
 	public void connectionLost(MqttException cause) {
 		final String methodName = "connectionLost";
@@ -241,8 +245,9 @@ public class CommsCallback implements Runnable {
 				mqttCallback.connectionLost(cause);
 			}
 		} catch (java.lang.Throwable t) {
-			// Just log the fact that a throwable has caught connection lost 
-			// is called during shutdown processing so no need to do anything else
+			// Just log the fact that a throwable has caught connection lost
+			// is called during shutdown processing so no need to do anything
+			// else
 			// @TRACE 720=exception from connectionLost {0}
 			log.fine(className, methodName, "720", new Object[] { t });
 		}
@@ -287,8 +292,8 @@ public class CommsCallback implements Runnable {
 		final String methodName = "messageArrived";
 		if (mqttCallback != null) {
 			// If we already have enough messages queued up in memory, wait
-			// until some more queue space becomes available. This helps 
-			// the client protect itself from getting flooded by messages 
+			// until some more queue space becomes available. This helps
+			// the client protect itself from getting flooded by messages
 			// from the server.
 			synchronized (spaceAvailable) {
 				if (!quiescing && messageQueue.size() >= INBOUND_QUEUE_SIZE) {
@@ -338,21 +343,31 @@ public class CommsCallback implements Runnable {
 	private void handleMessage(MqttPublish publishMessage)
 			throws MqttException, Exception {
 		final String methodName = "handleMessage";
-		// If quisecing process any pending messages. 
+		// If quisecing process any pending messages.
 		if (mqttCallback != null) {
 			String destName = publishMessage.getTopicName();
 
 			// @TRACE 713=call messageArrived key={0} topic={1}
-			log.fine(className, methodName, "713", new Object[] { 
+			log.fine(className, methodName, "713", new Object[] {
 					new Long(publishMessage.getMessageId()), destName });
-			mqttCallback.messageArrived(destName, publishMessage.getMessage());
+
+			if (!MqttUtil.isEmpty(destName) && destName.endsWith("/p")) {
+				destName = destName.substring(0, destName.lastIndexOf("/p"));
+				mqttCallback.presenceMessageArrived(destName,
+						publishMessage.getMessage());
+			} else {
+				mqttCallback.messageArrived(destName,
+						publishMessage.getMessage());
+			}
+
 			if (publishMessage.getMessage().getQos() == 1) {
 				this.clientComms.internalSend(new MqttPubAck(publishMessage),
 						new MqttToken(clientComms.getClient().getClientId()));
 			} else if (publishMessage.getMessage().getQos() == 2) {
 				this.clientComms.deliveryComplete(publishMessage);
 				MqttPubComp pubComp = new MqttPubComp(publishMessage);
-				this.clientComms.internalSend(pubComp, new MqttToken(clientComms.getClient().getClientId()));
+				this.clientComms.internalSend(pubComp, new MqttToken(
+						clientComms.getClient().getClientId()));
 			}
 		}
 	}
@@ -365,7 +380,8 @@ public class CommsCallback implements Runnable {
 			completeQueue.addElement(token);
 			synchronized (workAvailable) {
 				// @TRACE 715=new workAvailable. key={0}
-				log.fine(className, methodName, "715", new Object[] { token.internalTok.getKey() });
+				log.fine(className, methodName, "715",
+						new Object[] { token.internalTok.getKey() });
 				workAvailable.notifyAll();
 			}
 		} else {
@@ -377,9 +393,9 @@ public class CommsCallback implements Runnable {
 				// of class NoClassDefFoundError
 				// @TRACE 719=callback threw ex:
 				log.fine(className, methodName, "719", null, ex);
-				
+
 				// Shutdown likely already in progress but no harm to confirm
-			//	System.err.println("problem in asyncopcomplete "+ex);
+				// System.err.println("problem in asyncopcomplete "+ex);
 				ex.printStackTrace();
 				clientComms.shutdownConnection(null, new MqttException(ex));
 			}

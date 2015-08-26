@@ -712,5 +712,8 @@ public interface IMqttAsyncClient {
 	public void close() throws MqttException;
 	
 	
+	public void subscribePresence(String topic, final IMqttActionListener mqttAction);
+	
+	public void unsubscribePresence(String topic, final IMqttActionListener mqttAction);
 	public IMqttToken ping(IMqttActionListener callback) throws MqttException;
 }

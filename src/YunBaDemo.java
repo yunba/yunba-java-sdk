@@ -32,6 +32,13 @@ public class YunBaDemo {
 				public void connectionLost(Throwable cause) {
 					System.out.println("mqtt connectionLost");
 				}
+
+				@Override
+				public void presenceMessageArrived(String topic,
+						MqttMessage message) throws Exception {
+					System.out.println("presenceMessageArrivedtopic = " + topic + " msg = " + new String(message.getPayload())) ;
+					
+				}
 			});
 			//API  connect to yunba server
 			mqttAsyncClient.connect(new IMqttActionListener() {

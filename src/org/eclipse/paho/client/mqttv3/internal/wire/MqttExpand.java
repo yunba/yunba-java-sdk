@@ -17,6 +17,12 @@ public class MqttExpand extends MqttWireMessage{
 	public static final byte CMD_PUBLISH_ACK = 8;
 	public static final byte CMD_GET_STATUS = 9;
 	public static final byte CMD_GET_STATUS_ACK = 10;
+	public static final byte CMD_GET_STATUS_V2 = 19;
+	public static final byte CMD_GET_STATUS_ACK_V2 = 20;
+	public static final byte CMD_GET_TOPIC_V2 = 13;
+	public static final byte CMD_GET_TOPIC_ACK_V2 = 14;
+	public static final byte CMD_GET_ALIASLIST_V2 = 15;
+	public static final byte CMD_GET_ALIASLIST_ACK_V2 = 16;
 	
 	public MqttExpand () {
 		super(MqttWireMessage.MESSAGE_TYPE_EXPAND);
