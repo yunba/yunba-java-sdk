@@ -13,6 +13,7 @@ package org.eclipse.paho.client.mqttv3.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
@@ -118,7 +119,11 @@ public class CommsReceiver implements Runnable {
 				//@TRACE 852=network read message
 				log.fine(className,methodName,"852");
 				MqttWireMessage message = in.readMqttWireMessage();
-				if(null != message) System.out.println(" Receiver msg key = " + message.getKey() + " msgID = " + message.getMessageId() + " getType = " + message.getTypeStr());
+				if(null != message) {
+					SimpleDateFormat time_formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss.SSS");
+					String current_time_str = time_formatter.format(System.currentTimeMillis());
+					System.out.println(current_time_str + " : Receiver msg key = " + message.getKey() + " msgID = " + message.getMessageId() + " getType = " + message.getTypeStr());
+				}
 				if (message instanceof MqttAck) {
 					token = tokenStore.getToken(message);
 					if (token!=null) {

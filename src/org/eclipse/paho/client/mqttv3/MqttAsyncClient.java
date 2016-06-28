@@ -301,6 +301,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 
 		String clientId = MqttUtil.getCid();
 		String serverURI = MqttUtil.getBroker();
+		//System.err.println("serverURI = " + serverURI);
 		if (MqttUtil.isEmpty(clientId))
 			throw ExceptionHelper
 					.createMqttException(MqttException.REASON_CODE_INVALID_CLIENT_ID);

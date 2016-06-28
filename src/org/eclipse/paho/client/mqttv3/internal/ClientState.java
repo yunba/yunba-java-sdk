@@ -521,7 +521,8 @@ public class ClientState {
 					
 					// A ping has already been sent. At this point, assume that the
 					// broker has hung and the TCP layer hasn't noticed.
-					throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_CLIENT_TIMEOUT);
+					//throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_CLIENT_TIMEOUT);
+					return null;
 				} 
 				
 				//@TRACE 620=ping needed. keepAlive={0} lastOutboundActivity={1} lastInboundActivity={2}

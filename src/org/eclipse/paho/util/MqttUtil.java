@@ -1,6 +1,13 @@
 package org.eclipse.paho.util;
 
+
+
+
+
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -10,6 +17,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Iterator;
@@ -24,9 +32,16 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 public class MqttUtil {
 	public final static String RIGSTER_URL = "http://reg.yunba.io:8383/device/reg/";
 	public static  String BROKER_URL = "tcp://182.92.154.3:1883";
-	public static final String		MQTT_HOST = "b1.wei60.com";
+	public static final String TCP_TICKET_URL = "tick-t.yunba.io";
+	public static final String HTTP_TICKET_IP = "http://101.200.229.48:9999";
+	public static final String		MQTT_HOST = "tick-b.yunba.io";
+	
+	 public static final int TCP_TICKET_PORT = 9977;
+		public static final String TCP_TICKET_IP = "123.57.32.238";
+
 	public static final String		DATA_FILE = ".opts";
 	private static Properties pro;
+	private static long mLastLookupTime = 0;
 	public static void register(JSONObject obj ) {
 	    pro = getOptsPro();
 		if(null != pro && pro.getProperty("a", null).equals(obj.optString("a", ""))) {
@@ -157,7 +172,7 @@ public class MqttUtil {
 			
 			if(!isEmpty(uName) && !isEmpty(pwd) && !isEmpty(cid)) {
 				MqttConnectOptions opts = new MqttConnectOptions();
-				opts.setKeepAliveInterval(200);
+				opts.setKeepAliveInterval(250);
 				opts.setUserName(uName);
 				opts.setPassword(pwd.toCharArray());
 				return opts;
@@ -208,12 +223,147 @@ public class MqttUtil {
 	}
 	
 	public static String getBroker() {
+		String broker = lookup();
+		if(!isEmpty(broker)) return broker;
 		String ip = hostToIp(MQTT_HOST);
 		if(isEmpty(ip)) return BROKER_URL;
 		return new StringBuilder().append("tcp://").append(ip).append(":1883").toString();
 	}
 
+	 public static String doTcpJSON2( String url, int port, String json) { 
+	    	if(isEmpty(json)) return null;
+	    	String ret = null;
+	    	Socket socket = null;
+			BufferedReader in = null;
+			DataInputStream din = null;
+			DataOutputStream dos = null;
+			ByteArrayOutputStream outSteam = null;
+			try {
+				//json = "{\"a\":\"5520a2887e353f5814e10b62\",\"n\":\"WIFI\",\"v\":\"erlang-sdk\",\"o\":\"CDMA\",\"c\":\"00000001-0000002\",\"t\":\"ip\"}";
+				socket = new Socket(url, port);
+				socket.setSoTimeout(2000);
+				din = new DataInputStream(socket.getInputStream());
+				// OutputStreamWriter out = new
+				// OutputStreamWriter(socket.getOutputStream());
+
+	           
+	            ByteArrayOutputStream bot = new ByteArrayOutputStream();
+	            DataOutputStream mydata = new DataOutputStream(bot);
+	            mydata.writeByte(1);
+	            mydata.writeShort(json.getBytes().length);
+	          //  mydata.writeChar(json.getBytes().length);
+	         //   System.err.println("lenth = " + json.getBytes().length);
+	            mydata.write(json.getBytes());
+				dos = new DataOutputStream(socket.getOutputStream());
+				
+				// String outMsgString = "xgapplist:" + getLocalXGApps();
+				// if (content != null) {
+				// outMsgString = content;
+				// }
+
+				
+//				for (byte theByte : bot.toByteArray())
+//				{
+//				  System.out.print(Integer.toHexString(theByte) + " ");
+//				}
+				dos.write(bot.toByteArray());
+
+				dos.flush();
+				outSteam = new ByteArrayOutputStream();
+				byte[] buffer = new byte[1024];
+				int len = -1;
+				while ((len = socket.getInputStream().read(buffer)) > -1) {
+
+//					 System.err.println("2receive msg from getInputStream len = " +
+//					 len);
+//					 ret = new String(buffer);
+//					 System.err.println("2receive msg from watchdog server " +
+//					 ret);
+					outSteam.write(buffer, 0, len);
+				}
+			
+				if (outSteam.toByteArray().length > 3) {
+					//byte[] bytes = TpnsSecurity.oiSymmetryDecrypt2Byte(outSteam.toByteArray());
+					byte[] returnBytes = outSteam.toByteArray();
+					byte[] stringBytes = new byte[returnBytes.length-3];
+					System.arraycopy(returnBytes, 3, stringBytes, 0, stringBytes.length);;
+					ret = new String(stringBytes);
+				} else {
+					 System.err.println("receive msg from ticket server null");
+				}
+				// nextSendTime = now + 10 * 1000;
+			} catch (Throwable e) {
+				System.err.println(e);
+			} finally {
+				if (null != socket) {
+					try {
+						socket.close();
+					} catch (Exception e) {
+						System.err.println("close socket failed " + e.getMessage());
+					}
+				}
+				if (in != null) {
+					try {
+						in.close();
+					} catch (Exception ee) {
+
+					}
+				}
+				if (null != outSteam) {
+					try {
+						outSteam.close();
+					} catch (IOException e) {
+
+					}
+				}
+				if (dos != null) {
+					try {
+						dos.close();
+					} catch (Exception ee) {
+
+					}
+				}
+				
+				if(din != null) {
+					try {
+						din.close();
+					} catch (Exception dee) {
+
+					}
+				}
+			}
+			return ret;
+	    }
+	public static String lookup(){
+//		if (Math.abs(System.currentTimeMillis() - mLastLookupTime) < 10 * 60 * 1000) {
+//			return null;
+//		}
+		try {
+			JSONObject ticket = new JSONObject();
+			Properties pro = getOptsPro();
+			if(null ==  pro) return null;
+			ticket.put("a", pro.getProperty("a"));
+			ticket.put("v", "1.0");
 	
+			if(!isEmpty( pro.getProperty("c"))) {
+				ticket.put("c", pro.getProperty("a"));
+			}
+			String ticketIp = TCP_TICKET_IP;
+			String  tIp = hostToIp(TCP_TICKET_URL);
+			if (!isEmpty(tIp)) {
+				ticketIp = tIp;
+			}
+			String ticketInfo = doTcpJSON2(ticketIp, TCP_TICKET_PORT, ticket.toString());
+			System.err.println("ticket info = " + ticketInfo);
+			JSONObject result = new JSONObject(ticketInfo);
+			String ip  = result.getString("c");
+			return ip;
+			
+			
+		} catch(Exception e) {
+			return null;
+		}
+	}
 	
 	public static void main(String[] args) throws JSONException, MqttException {
 		

@@ -13,6 +13,8 @@ package org.eclipse.paho.client.mqttv3.internal;
 
 
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttToken;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttAck;
@@ -105,7 +107,9 @@ public class CommsSender implements Runnable {
 			try {
 				message = clientState.get();
 				if (message != null) {
-					System.out.println("Send msg to server: msgId = " + message.getKey() + " key = " + message.getTypeStr());
+					SimpleDateFormat time_formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss.SSS");
+					String current_time_str = time_formatter.format(System.currentTimeMillis());
+					System.out.println(current_time_str + " : Send msg to server: msgId = " + message.getKey() + " key = " + message.getTypeStr());
 					//@TRACE 802=network send key={0} msg={1}
 					log.fine(className,methodName,"802", new Object[] {message.getKey(),message});
                  
@@ -132,11 +136,12 @@ public class CommsSender implements Runnable {
 					log.fine(className,methodName,"803");
 
 					running = false;
+					clientComms.shutdownConnection(null, new MqttException(MqttException.REASON_CODE_CLIENT_TIMEOUT));
 				}
 			} catch (MqttException me) {
 			//	YLogger.e(className, methodName, me);
 				handleRunException(message, me);
-			} catch (Exception ex) {		
+			} catch (Throwable ex) {		
 			//	YLogger.e(className, methodName, ex);
 				handleRunException(message, ex);	
 			}
@@ -147,7 +152,7 @@ public class CommsSender implements Runnable {
 
 	}
 
-	private void handleRunException(MqttWireMessage message, Exception ex) {
+	private void handleRunException(MqttWireMessage message, Throwable ex) {
 		final String methodName = "handleRunException";
 		//@TRACE 804=exception
 		//log.fine(className,methodName,"804",null, ex);
