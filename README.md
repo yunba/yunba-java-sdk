@@ -1,4 +1,7 @@
-## build jar
-```
-ant sdkjar
-```
+## 官方声明
+
+Java SDK 目前暂时停止官方维护，给您带来的不便，我们深表抱歉。
+
+如果只需要发布消息，建议使用 RESTful API。
+
+
