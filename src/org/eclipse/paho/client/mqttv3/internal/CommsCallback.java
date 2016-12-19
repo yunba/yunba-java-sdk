@@ -13,6 +13,8 @@ package org.eclipse.paho.client.mqttv3.internal;
 
 
 
+import io.yunba.java.util.MqttUtil;
+
 import java.util.Vector;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
@@ -25,7 +27,6 @@ import org.eclipse.paho.client.mqttv3.internal.wire.MqttPubComp;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttPublish;
 import org.eclipse.paho.client.mqttv3.logging.Logger;
 import org.eclipse.paho.client.mqttv3.logging.LoggerFactory;
-import org.eclipse.paho.util.MqttUtil;
 
 /**
  * Bridge between Receiver and the external API. This class gets called by

@@ -2,6 +2,8 @@ package org.eclipse.paho.client.mqttv3.internal.wire;
 
 
 
+import io.yunba.java.util.MqttUtil;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -13,7 +15,6 @@ import java.util.Map;
 
 import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.util.MqttUtil;
 ;
 
 public class MqttExpandPublish extends MqttExpand {

@@ -14,6 +14,9 @@ package org.eclipse.paho.client.mqttv3;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
+import io.yunba.java.core.MQTTMessage;
+import io.yunba.java.util.MqttUtil;
+
 import java.io.UnsupportedEncodingException;
 import java.util.Hashtable;
 import java.util.Properties;
@@ -45,7 +48,6 @@ import org.eclipse.paho.client.mqttv3.logging.LoggerFactory;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.util.Debug;
-import org.eclipse.paho.util.MqttUtil;
 
 /**
  * Lightweight client for talking to an MQTT server using non-blocking methods
@@ -1016,6 +1018,30 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 
 	}
 
+	public MqttToken expand(MQTTMessage cache) throws Exception {
+		MqttToken token = new MqttToken(getClientId());
+		MqttExpand expand ;
+		switch (cache.EXPAND_COMMNAD) {
+		case MqttExpand.CMD_PUBLISH:
+			JSONObject opts = null;
+			if (null != cache.userContent) {
+				opts = new JSONObject(cache.userContent.toString());
+			}
+			expand = new MqttExpandPublish(cache.topic, cache.msg, cache.EXPAND_COMMNAD, opts);
+			token.setUserContext(cache.callbackId);
+			comms.sendNoWait(expand, token);
+			break;
+
+		default:
+			expand = new MqttExpand(cache.topic, cache.EXPAND_COMMNAD);
+			token.setUserContext(cache.callbackId);
+			comms.sendNoWait(expand, token);
+			break;
+		}
+		return token;
+		
+	}
+	
 	public IMqttToken connect(IMqttActionListener callback)
 			throws MqttException, MqttSecurityException {
 		return this.connect(MqttUtil.getOpts(), null, callback);
