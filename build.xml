@@ -3,9 +3,7 @@
 	<property name="dist.dir" value="dist" />
 	<property name="build.dir" value="build" />
 
-    <property
-        name="libs"
-        value="libs" />
+	<property name="libs" value="libs" />
 	<property name="mqtt.dir" value="src/org/eclipse/paho/client/mqttv3" />
 
 	<property name="nls.dir" value="${mqtt.dir}/internal/nls" />
@@ -36,31 +34,31 @@
 	</target>
 	<target name="compile" depends="init,copy-nls, unzip">
 
-		<javac destdir="${build.classes.dir}"
-			srcdir="src">
+		<javac destdir="${build.classes.dir}" srcdir="src">
 
 			<compilerarg line="-encoding UTF-8" />
-			<classpath refid="project.javac.classpath"/>  
+			<classpath refid="project.javac.classpath" />
 		</javac>
 	</target>
-<path id="project.javac.classpath">
-     <pathelement location="${external-lib}/jettison-1.1.jar"></pathelement>
-
-</path>
+	
+	<path id="project.javac.classpath">
+		<pathelement location="${external-lib}/jettison-1.1.jar"></pathelement>
+		<pathelement location="${external-lib}/guava-17.0.jar"></pathelement>
+	</path>
+	
 	<target name="unzip">
 		<unzip dest="${build.classes.dir}" src="libs/jettison-1.1.jar" />
-		</target>
-	
-	 <target
-        name="sdkjar"
-        depends="compile" >
+		<unzip dest="${build.classes.dir}" src="libs/guava-17.0.jar" />
+	</target>
 
-        
+	<target name="sdkjar" depends="compile">
 
-        <jar destfile="${dist.dir}/yunba-java-sdk.jar" >
 
-            <fileset dir="${build.classes.dir}" />
-        </jar>
-    </target>
-    
+
+		<jar destfile="${dist.dir}/yunba-java-sdk.jar">
+
+			<fileset dir="${build.classes.dir}" />
+		</jar>
+	</target>
+
 </project>

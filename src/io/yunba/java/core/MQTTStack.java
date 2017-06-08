@@ -34,8 +34,8 @@ public class MQTTStack {
 	private static final int HANDLER_EXPAND_TIMEOUT = 1004;
 	private static final int CALLBACK_TIMEOUT = 30000;
 	private static final int CONNECT_ACK_TIMEOUT = 10000;
-	private static final int PING_INTERVAL = 5 * 1000;
-	private static final int MAX_PING_LOST_COUNT = 3;
+	private static final int PING_INTERVAL = 5 * 60 * 1000;
+	private static final int MAX_PING_LOST_COUNT = 1;
 	private MqttAsyncClient mMqttClient = null;
 	private MQTTState mConnectState = null;
 	private MessageDelivery mDelivery = null;
@@ -160,7 +160,8 @@ public class MQTTStack {
 	}
 
 	public void handleKeepLive(int delay) {
-		if(mRunningStoped.get()) return;
+		if (mRunningStoped.get())
+			return;
 		if (0 == delay) {
 			mConnectState.ping(false);
 		} else {
@@ -784,6 +785,7 @@ public class MQTTStack {
 		}
 
 		public void ping(boolean isForcePing) {
+			System.out.println("####################### ping");
 			try {
 				// no need to ping, Because it have succeed recently
 				if (!isForcePing

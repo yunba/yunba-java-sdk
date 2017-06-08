@@ -1,8 +1,10 @@
 /build
 /dist
 /bin
+/bin1
 /.settings
 .classpath
 .DS_Store
 .opts
 src/org/eclipse/paho/util/YunBaDemo.javA
+

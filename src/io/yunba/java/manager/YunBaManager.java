@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttExpand;
@@ -168,13 +169,31 @@ public class YunBaManager {
 		publish(topic, message, 1, mqttAction);
 	}
 
+	public static void publish2(String topic, String message, JSONObject opts, 
+			final IMqttActionListener mqttAction) {
+		if (!isValidTopic(topic)) {
+			if (null != mqttAction) {
+				executor.execute(new Runnable() {
+					public void run() {
+						mqttAction.onFailure(null, new MqttException(
+								MqttException.REASON_CODE_INVALID_TOPIC));
+					}
+				});
+			}
+			return;
+		}
+		MQTTMessage cache = new MQTTMessage(MQTTMessage.TYPE_EXPAND, topic, message, 1, 
+				opts, -1, mqttAction);
+		mMqttStack.addMQTTMessage(cache);
+	}
+	
 	private static void publish(String topic, String message, int qos,
 			final IMqttActionListener mqttAction) {
 		MQTTMessage cache = new MQTTMessage(MQTTMessage.TYPE_PUBLISH, topic,
 				message, qos, null, -1, mqttAction);
 		mMqttStack.addMQTTMessage(cache);
 	}
-
+	
 	public static void setAlias(String alias,
 			final IMqttActionListener mqttAction) {
 		if(!isValidTopic(alias)){

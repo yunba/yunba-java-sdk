@@ -32,9 +32,6 @@ public class CommonUtil {
 		}
 	}
 
-	/**
-	 * 0:未尝试 1:全部失败 2:dns失败，sys成功 3:dns成功
-	 */
 	public static byte DNS_REASON = 0;
 	
     public static <T> String join(T[] array, String cement) {

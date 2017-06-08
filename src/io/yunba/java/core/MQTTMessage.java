@@ -11,6 +11,8 @@ public class MQTTMessage {
 	/**
 	 * 1 : subscribe
 	 * 2 : publish
+	 * 3 : unsubscribe
+	 * 4 : expand
 	 */
 	public int type;
 	
