@@ -3,6 +3,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
 import com.google.common.eventbus.Subscribe;
@@ -11,11 +12,11 @@ import io.yunba.java.core.event.MessageArrivedEvent;
 import io.yunba.java.manager.YunBaManager;
 
 public class YunBaDemo {
-	public static String ALIAS = "51595de01b2943499227e62713fb49ee_9cc8b78f9bf847e0aa1512f347f03bbc";
-
+	public static String ALIAS = "self_alias";
+	
 	public static void main(String[] args) {
 		// 初始化 YunBa SDK
-		YunBaManager.start("56a0a88c4407a3cd028ac2fe");
+		YunBaManager.start("58d49dad15a25f8920eaccda");
 
 		YunBaManager.getEventBus().register(new Object() {
 
@@ -43,27 +44,6 @@ public class YunBaDemo {
 		});
 
 		// 订阅一个频道(Topic)，以接收来自频道的消息
-		YunBaManager.subscribe("bullet", new IMqttActionListener() {
-
-			@Override
-			public void onSuccess(IMqttToken asyncActionToken) {
-				System.out.println("mqtt succeed subscribe: "
-						+ join(asyncActionToken.getTopics(), ","));
-			}
-
-			@Override
-			public void onFailure(IMqttToken asyncActionToken,
-					Throwable exception) {
-				if (exception instanceof MqttException) {
-					MqttException ex = (MqttException) exception;
-					System.err
-							.println("subscribe failed with the error code = "
-									+ ex.getReasonCode());
-				}
-			}
-		});
-
-		// 订阅一个频道(Topic)，以接收来自频道的消息
 		YunBaManager.subscribe("like", new IMqttActionListener() {
 
 			@Override
@@ -83,29 +63,9 @@ public class YunBaDemo {
 				}
 			}
 		});
-
-		// 订阅一个频道(Topic)，以接收来自频道的消息
-		YunBaManager.subscribe("stat", new IMqttActionListener() {
-
-			@Override
-			public void onSuccess(IMqttToken asyncActionToken) {
-				System.out.println("mqtt succeed subscribe: "
-						+ join(asyncActionToken.getTopics(), ","));
-			}
-
-			@Override
-			public void onFailure(IMqttToken asyncActionToken,
-					Throwable exception) {
-				if (exception instanceof MqttException) {
-					MqttException ex = (MqttException) exception;
-					System.err
-							.println("subscribe failed with the error code = "
-									+ ex.getReasonCode());
-				}
-			}
-		});
+		
 		// 向 Topic 发送消息
-		YunBaManager.publish("bullet", "like", new IMqttActionListener() {
+		YunBaManager.publish("like", "publis message", new IMqttActionListener() {
 
 			@Override
 			public void onSuccess(IMqttToken asyncActionToken) {
@@ -122,7 +82,7 @@ public class YunBaDemo {
 				}
 			}
 		});
-//
+
 //		YunBaManager.unsubscribe("test_topic", new IMqttActionListener() {
 //
 //			@Override
@@ -149,6 +109,23 @@ public class YunBaDemo {
 			@Override
 			public void onSuccess(IMqttToken asyncActionToken) {
 				System.out.println("mqtt setAlias success");
+				
+				// 向用户别名对象发送消息，用于实现点对点的消息发送
+				YunBaManager.publishToAlias(ALIAS, "msg to java_alaias", new IMqttActionListener() {
+					
+					@Override
+					public void onSuccess(IMqttToken asyncActionToken) {
+						// TODO Auto-generated method stub
+						System.out.println("publishToAlias success");
+						
+					}
+					
+					@Override
+					public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+						// TODO Auto-generated method stub
+						System.err.println(exception.toString());
+					}
+				});
 			}
 
 			@Override
@@ -167,7 +144,7 @@ public class YunBaDemo {
 
 			@Override
 			public void onSuccess(IMqttToken asyncActionToken) {
-				System.out.println("mqtt get alias = "
+				System.err.println("mqtt get alias = "
 						+ asyncActionToken.getAlias());
 			}
 
@@ -179,11 +156,32 @@ public class YunBaDemo {
 						+ mqtt.getReasonCode());
 			}
 		});
+		
+//		
+		// 使用publish2发布消息
+		JSONObject optsJson = new JSONObject();
+		try {
+			optsJson.put("qos", 2);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		
+		YunBaManager.publish2("like", "publish2 message", new JSONObject(), new IMqttActionListener() {
+			
+			@Override
+			public void onSuccess(IMqttToken asyncActionToken) {
+				// TODO Auto-generated method stub
+				System.out.println("publish2 success");
+			}
+			
+			@Override
+			public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+				// TODO Auto-generated method stub
+				System.out.println(exception.toString());
+			}
+		});
 
-//		// 向用户别名对象发送消息，用于实现点对点的消息发送
-//		YunBaManager.publishToAlias("java_alias", "msg to java_alaias", null);
-//
-//		// 查询当前用户订阅的频道列表
+////		// 查询当前用户订阅的频道列表
 //		YunBaManager.getTopicList("java_alias", new IMqttActionListener() {
 //
 //			@Override
@@ -201,9 +199,9 @@ public class YunBaDemo {
 //				}
 //			}
 //		});
-//
-//		// 根据 别名 来获取用户的状态
-//		YunBaManager.getState("java_alias", new IMqttActionListener() {
+////
+////		// 根据 别名 来获取用户的状态
+//		YunBaManager.getState(ALIAS, new IMqttActionListener() {
 //
 //			@Override
 //			public void onSuccess(IMqttToken asyncActionToken) {
@@ -220,12 +218,12 @@ public class YunBaDemo {
 //			@Override
 //			public void onFailure(IMqttToken asyncActionToken,
 //					Throwable exception) {
-//				System.err.println("mqtt get state failed");
+//				System.err.println("mqtt get state failed: " + exception.toString());
 //			}
 //		});
 //
-//		// 获取输入 Topic 下面所有订阅用户的 别名
-//		YunBaManager.getAliasList("test_topic", new IMqttActionListener() {
+////		// 获取输入 Topic 下面所有订阅用户的 别名
+//		YunBaManager.getAliasList("bullet", new IMqttActionListener() {
 //
 //			@Override
 //			public void onSuccess(IMqttToken asyncActionToken) {
@@ -235,7 +233,7 @@ public class YunBaDemo {
 //					System.out.println("mqtt getAliasList: "
 //							+ topics.toString());
 //				} catch (JSONException e) {
-//
+//					e.printStackTrace();
 //				}
 //			}
 //
@@ -251,7 +249,7 @@ public class YunBaDemo {
 //			}
 //		});
 //
-//		// 订阅某个频道上的用户的上、下线 及 订阅（或取消订阅）该频道的事件通知
+////		// 订阅某个频道上的用户的上、下线 及 订阅（或取消订阅）该频道的事件通知
 //		YunBaManager.subscribePresence("test_topic", new IMqttActionListener() {
 //
 //			@Override

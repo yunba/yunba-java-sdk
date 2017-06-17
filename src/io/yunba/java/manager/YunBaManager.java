@@ -32,9 +32,6 @@ public class YunBaManager {
 	public static final String LAST_SUB = "last_sub";
 	public static final String HISTORY_TOPICS = "history_topics";
 	
-	private static int callBackId = 0;
-	public static ConcurrentHashMap<Integer, IMqttActionListener> callbacks = new ConcurrentHashMap<Integer, IMqttActionListener>();
-	
 	private static ExecutorService executor = Executors.newSingleThreadExecutor();
 	private static MQTTStack mMqttStack;
 	public static String AppKey = null;
@@ -58,18 +55,6 @@ public class YunBaManager {
 		mMqttStack.start();
 	}
 
-	public static IMqttActionListener getTagAliasCallback(int seqId) {
-		try {
-			return callbacks.remove(seqId);
-		} catch (Exception e) {
-			return null;
-		}
-	}
-	
-	private synchronized static int getCallbackID() {
-		return callBackId++;
-	}
-	
 	public static EventBus getEventBus() {
 		if (null == mEventBus) {
 			synchronized (YunBaManager.class) { 
@@ -184,6 +169,7 @@ public class YunBaManager {
 		}
 		MQTTMessage cache = new MQTTMessage(MQTTMessage.TYPE_EXPAND, topic, message, 1, 
 				opts, -1, mqttAction);
+		cache.EXPAND_COMMNAD = MqttExpand.CMD_PUBLISH;
 		mMqttStack.addMQTTMessage(cache);
 	}
 	
@@ -409,9 +395,7 @@ public class YunBaManager {
 	private static class MQTTMessageFactory {
 		public static MQTTMessage getExpandMessgae(byte expandCommand, String topic, String msg, int qos, Object userContent, 
 				IMqttActionListener listener) {
-			int serialId = getCallbackID();
-			callbacks.put(serialId, listener);
-			MQTTMessage res = new MQTTMessage(MQTTMessage.TYPE_EXPAND, topic, msg, qos, userContent, serialId, listener);
+			MQTTMessage res = new MQTTMessage(MQTTMessage.TYPE_EXPAND, topic, msg, qos, userContent, -1, listener);
 			res.EXPAND_COMMNAD = expandCommand;
 			return res;
 		}

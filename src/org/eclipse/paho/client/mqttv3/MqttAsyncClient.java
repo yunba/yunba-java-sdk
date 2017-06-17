@@ -1018,8 +1018,10 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 
 	}
 
-	public MqttToken expand(MQTTMessage cache) throws Exception {
+	public MqttToken expand(MQTTMessage cache, IMqttActionListener callback) throws Exception {
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
+		
 		MqttExpand expand ;
 		switch (cache.EXPAND_COMMNAD) {
 		case MqttExpand.CMD_PUBLISH:
@@ -1078,6 +1080,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 			throws MqttException {
 
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
 		MqttExpand expand = new MqttExpand(topic, MqttExpand.CMD_GET_ALIASLIST);
 		if (null != callback) {
 			int id = getCallbackID();
@@ -1092,6 +1095,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 			final IMqttActionListener callback) throws Exception {
 
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
 		MqttExpand expand = new MqttExpandPublish(topic, msg,
 				MqttExpand.CMD_PUBLISH, opts);
 		if (null != callback) {
@@ -1106,6 +1110,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 	public void getStatusByAlias(String topic, IMqttActionListener callback)
 			throws MqttException {
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
 		MqttExpand expand = new MqttExpand(topic, MqttExpand.CMD_GET_STATUS);
 		if (null != callback) {
 			int id = getCallbackID();
@@ -1119,6 +1124,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 	public void getTopics(String alias, IMqttActionListener callback)
 			throws MqttException {
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
 		MqttExpand expand = new MqttExpand(alias, MqttExpand.CMD_GET_TOPIC);
 		if (null != callback) {
 			int id = getCallbackID();
@@ -1131,6 +1137,7 @@ public class MqttAsyncClient implements IMqttAsyncClient { // DestinationProvide
 
 	public void getAlias(IMqttActionListener callback) throws MqttException {
 		MqttToken token = new MqttToken(getClientId());
+		token.setActionCallback(callback);
 		MqttExpand expand = new MqttExpand(null, MqttExpand.CMD_GET_ALIAS);
 		if (null != callback) {
 			int id = getCallbackID();

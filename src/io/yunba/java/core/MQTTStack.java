@@ -529,10 +529,7 @@ public class MQTTStack {
 
 				@Override
 				public void run() {
-					if (msg.callbackId != -1
-							&& YunBaManager.getTagAliasCallback(msg.callbackId) != null) {
-						handleTimeOut(HANDLER_EXPAND_TIMEOUT, msg);
-					}
+					handleTimeOut(HANDLER_EXPAND_TIMEOUT, msg);
 				}
 			};
 		}
@@ -669,9 +666,29 @@ public class MQTTStack {
 		@Override
 		public void expand(MQTTMessage msg) {
 			final TimerTask timeoutTask = getExpandTimeOutTask(msg);
+			final IMqttActionListener originCallback = msg.callback;
 			mTimer.schedule(timeoutTask, CALLBACK_TIMEOUT);
 			try {
-				mMqttClient.expand(msg);
+				mMqttClient.expand(msg, new IMqttActionListener() {
+					
+					@Override
+					public void onSuccess(IMqttToken asyncActionToken) {
+						// TODO Auto-generated method stub
+						timeoutTask.cancel();
+						if (originCallback != null) {
+							originCallback.onSuccess(asyncActionToken);
+						}
+					}
+					
+					@Override
+					public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+						// TODO Auto-generated method stub
+						timeoutTask.cancel();
+						if (originCallback != null) {
+							originCallback.onFailure(asyncActionToken, exception);
+						}
+					}
+				});
 			} catch (Exception e) {
 			}
 		}
@@ -785,7 +802,6 @@ public class MQTTStack {
 		}
 
 		public void ping(boolean isForcePing) {
-			System.out.println("####################### ping");
 			try {
 				// no need to ping, Because it have succeed recently
 				if (!isForcePing

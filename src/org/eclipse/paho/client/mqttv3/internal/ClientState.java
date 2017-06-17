@@ -18,6 +18,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Vector;
 
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.MqttClientPersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -28,6 +30,8 @@ import org.eclipse.paho.client.mqttv3.MqttToken;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttAck;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttConnack;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttConnect;
+import org.eclipse.paho.client.mqttv3.internal.wire.MqttExpand;
+import org.eclipse.paho.client.mqttv3.internal.wire.MqttExpandAck;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttPingReq;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttPingResp;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttPubAck;
@@ -779,6 +783,48 @@ public class ClientState {
 		checkQuiesceLock();
 	}
 
+	/**
+	 * Called by the CommsReceiver when an expand ack has arrived.
+	 * @param ack
+	 */
+	protected void notifyReceivedExpandAck(MqttExpandAck ack) {
+		this.lastInboundActivity = System.currentTimeMillis();
+		MqttToken token = tokenStore.getToken(ack);
+		MqttException mex = null;
+		if (ack.status != 0) {
+			mex = ExceptionHelper.createMqttException(ack.status);
+			notifyResult(ack, token, mex);
+			return;
+		}
+		switch (ack.command) {
+		case MqttExpand.CMD_GET_ALIAS_ACK:
+			try {
+				JSONObject resultJson = new JSONObject(ack.result);
+				token.setAlias(resultJson.optString("alias", null));
+			} catch(JSONException e) {
+				mex = ExceptionHelper.createMqttException(MqttException.REASON_CODE_BAD_RETURN_PARAMETER);
+			}
+			break;
+		case MqttExpand.CMD_GET_ALIASLIST_ACK:
+		case MqttExpand.CMD_GET_ALIASLIST_ACK_V2:
+		case MqttExpand.CMD_GET_STATUS_ACK:
+		case MqttExpand.CMD_GET_STATUS_ACK_V2:
+		case MqttExpand.CMD_GET_TOPIC_ACK:
+		case MqttExpand.CMD_GET_TOPIC_ACK_V2:
+			try {
+				JSONObject resultJson = new JSONObject(ack.result);
+				token.setResult(resultJson);
+			} catch(JSONException e) {
+				mex = ExceptionHelper.createMqttException(MqttException.REASON_CODE_BAD_RETURN_PARAMETER);
+			}
+			break;
+		}
+		notifyResult(ack, token, mex);
+		releaseMessageId(ack.getMessageId());
+		tokenStore.removeToken(ack);
+		checkQuiesceLock();
+	}
+	
 	/**
 	 * Called by the CommsReceiver when a message has been received.
 	 * Handles inbound messages and other flows such as pubrel. 

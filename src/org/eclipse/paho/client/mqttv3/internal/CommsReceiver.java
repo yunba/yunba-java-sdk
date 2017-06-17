@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttToken;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttAck;
 import org.eclipse.paho.client.mqttv3.internal.wire.MqttExpand;
@@ -143,10 +144,9 @@ public class CommsReceiver implements Runnable {
 							// if not!
 							if (message instanceof MqttExpandAck) {
 								MqttExpandAck mqttExpand = (MqttExpandAck) message;
-								handleExpand(mqttExpand, token);
+								clientState.notifyReceivedExpandAck(mqttExpand);
 							} else {
-								clientState
-										.notifyReceivedAck((MqttAck) message);
+								clientState.notifyReceivedAck((MqttAck) message);
 							}
 						}
 					} else {
@@ -222,69 +222,6 @@ public class CommsReceiver implements Runnable {
 
 		// @TRACE 854=<
 		log.fine(className, methodName, "854");
-	}
-
-	// handle expand commnad
-	private void handleExpand(final MqttExpandAck mqttExpand,
-			final MqttToken token) {
-		// YLogger.d(className, "Action: handleExpand");
-		// y s mqttExpand.toString());
-		int callbackId = (Integer) token.getUserContext();
-		// final IMqttActionListener callback =
-		// MqttAsyncClient.getTagAliasCallback(callbackId);
-		final IMqttActionListener callback = YunBaManager
-				.getTagAliasCallback(callbackId);
-		if (null != callback) {
-			switch (mqttExpand.status) {
-			case 0:
-				org.codehaus.jettison.json.JSONObject result;
-				try {
-					result = new org.codehaus.jettison.json.JSONObject(
-							mqttExpand.result);
-					token.setResult(result);
-					if (mqttExpand.command == MqttExpand.CMD_GET_ALIAS_ACK) {
-						token.setAlias(result.optString("alias", null));
-					}
-					new Thread(new Runnable() {
-
-						@Override
-						public void run() {
-							// System.err.println(className + "onSuccess - " +
-							// token.getResult());
-							callback.onSuccess(token);
-
-						}
-					}).start();
-				} catch (Exception e) {
-					new Thread(new Runnable() {
-
-						@Override
-						public void run() {
-							callback.onFailure(
-									null,
-									ExceptionHelper
-											.createMqttException(MqttException.REASON_CODE_BAD_RETURN_PARAMETER));
-						}
-					}).start();
-				}
-
-				break;
-
-			default:
-				new Thread(new Runnable() {
-
-					@Override
-					public void run() {
-						callback.onFailure(null, ExceptionHelper
-								.createMqttException(mqttExpand.status));
-					}
-				}).start();
-
-				break;
-			}
-		}
-		tokenStore.removeToken(mqttExpand);
-
 	}
 
 	public boolean isRunning() {
