@@ -4,6 +4,7 @@ import io.yunba.java.core.Constants;
 import io.yunba.java.core.MQTTMessage;
 import io.yunba.java.core.MQTTStack;
 import io.yunba.java.util.CommonUtil;
+import io.yunba.java.util.MqttUtil;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -246,7 +247,7 @@ public class YunBaManager {
 	}
 
 	public static void setBroker(String broker) {
-
+		MqttUtil.setBroker(broker);
 	}
 
 	public static void getAliasList(String topic,

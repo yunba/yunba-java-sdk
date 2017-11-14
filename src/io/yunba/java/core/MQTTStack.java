@@ -10,6 +10,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -25,6 +27,7 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.MqttToken;
 import org.eclipse.paho.client.mqttv3.internal.ExceptionHelper;
+import static java.util.concurrent.TimeUnit.*;
 
 public class MQTTStack {
 	public static int mInterval = (1000 * 5 - 20);
@@ -44,8 +47,8 @@ public class MQTTStack {
 	private int mPingLostCount = 0;
 	private String appKey;
 	private Timer mTimer = new Timer();
-	private Timer mPingTimer = null;
-	private TimerTask mPingTimerTask = null;
+	private final ScheduledExecutorService mPingScheduler = Executors.newScheduledThreadPool(1);
+	private ScheduledFuture<?> mPingScheduledFuture;
 	private MQTTThread mThread = null;
 	private MQTTMsgHandleThread mMsgHandleThread = null;
 	protected boolean runningFlag = false;
@@ -74,6 +77,7 @@ public class MQTTStack {
 		mConnectState = new MQTTIdleState();
 		mMsgHandleThread = new MQTTMsgHandleThread(mCacheMessages);
 		restartConnectThread();
+		schedulePing();
 	}
 
 	private void restartConnectThread() {
@@ -117,11 +121,8 @@ public class MQTTStack {
 			return;
 		}
 		if (mRunningStoped.compareAndSet(false, true)) {
+			mPingScheduledFuture.cancel(false);
 			mConnectState = new MQTTStopedState();
-			if (null != mPingTimer) {
-				mPingTimer.purge();
-				mPingTimer.cancel();
-			}
 			if (null != mThread) {
 				mThread.interrupt();
 			}
@@ -140,6 +141,9 @@ public class MQTTStack {
 
 	public void handleResumeAction() {
 		if (mRunningStoped.compareAndSet(true, false)) {
+			if (mPingScheduledFuture != null && mPingScheduledFuture.isCancelled()) {
+				schedulePing();
+			}
 			mTimer.schedule(new TimerTask() {
 
 				@Override
@@ -165,7 +169,7 @@ public class MQTTStack {
 		if (0 == delay) {
 			mConnectState.ping(false);
 		} else {
-			mPingTimer.schedule(new TimerTask() {
+			mTimer.schedule(new TimerTask() {
 
 				@Override
 				public void run() {
@@ -231,12 +235,13 @@ public class MQTTStack {
 							connectTimeOutTask.cancel();
 							mDelivery.postConnected();
 							setRunFlag(false);
+							mPingFailed.compareAndSet(true, false);
 							mLastPingTime = System.currentTimeMillis();
+							mDisconnectedTimes = 0;
 							mConnectState = new MQTTConnectedState();
 							if (!mMsgHandleThread.isAlive()) {
 								mMsgHandleThread.start();
 							}
-							schedulePing();
 						}
 
 						@Override
@@ -257,14 +262,14 @@ public class MQTTStack {
 
 	private void schedulePing() {
 		mPingFailed.compareAndSet(true, false);
-		mPingTimer = new Timer();
-		mPingTimer.schedule(mPingTimerTask = new TimerTask() {
-
+		mPingScheduledFuture = mPingScheduler.scheduleAtFixedRate(new Runnable() {
+			
 			@Override
 			public void run() {
+				System.out.println("start RTC");
 				handleKeepLive(0);
 			}
-		}, mInterval, PING_INTERVAL);
+		}, mInterval, PING_INTERVAL, MILLISECONDS);
 	}
 
 	private boolean isMQTTConnected() {
@@ -276,6 +281,11 @@ public class MQTTStack {
 	private void tryReconnect() {
 		int delayTime = (int) (Math.pow(2, mDisconnectedTimes) * 3 * 1000);
 		mDisconnectedTimes += 1;
+		System.out.println("tryReconnect() --> mDisconnectedTimes = " + mDisconnectedTimes);
+		// maybe need another broker IP
+		if (mDisconnectedTimes == 2) {
+			MqttUtil.resetLastLookupTime();
+		}
 		if (delayTime > mInterval * 500)
 			delayTime = mInterval * 500;
 		if (mDisconnectedTimes <= 4) {
@@ -292,9 +302,8 @@ public class MQTTStack {
 	}
 
 	private void handlePingFailed() {
-		if (isRunningFlag())
+		if (isRunningFlag() || mPingFailed.get() == false)
 			return;
-		mPingTimer.cancel();
 		try {
 
 			if (pingLock.isLocked()) {
@@ -321,7 +330,7 @@ public class MQTTStack {
 			try {
 				pingLock.unlock();
 			} catch (Exception e) {
-
+				
 			}
 		}
 	}
@@ -363,10 +372,9 @@ public class MQTTStack {
 		mConnectState = new MQTTStopedState();
 		if (null != mMqttClient) {
 			try {
-				mPingTimer.cancel();
-				mPingTimerTask.cancel();
 				mMqttClient.close();
 			} catch (Exception e) {
+				System.err.println(e.toString());
 			}
 		}
 	}
@@ -375,6 +383,7 @@ public class MQTTStack {
 
 		@Override
 		public void connectionLost(Throwable cause) {
+			System.err.println("PushCallback --> connectionLost");
 			releaseConnecThread();
 			tryReconnect();
 			mDelivery.postDisConnected();
@@ -809,7 +818,6 @@ public class MQTTStack {
 					return;
 				final TimerTask pingTimeOutTask = getPingTimeOutTask();
 				mTimer.schedule(pingTimeOutTask, CONNECT_ACK_TIMEOUT);
-
 				mMqttClient.ping(new IMqttActionListener() {
 
 					@Override

@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -18,6 +19,8 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.Properties;
+import java.util.regex.Pattern;
+
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
@@ -27,6 +30,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 public class MqttUtil {
 	public final static String RIGSTER_URL = "http://reg.yunba.io:8383/device/reg/";
 	public static String BROKER_URL = "tcp://182.92.154.3:1883";
+	public static String TEST_BROKER_URL = null;
 	public static final String TCP_TICKET_URL = "tick-t.yunba.io";
 	public static final String HTTP_TICKET_IP = "http://101.200.229.48:9999";
 	public static final String MQTT_HOST = "tick-b.yunba.io";
@@ -37,7 +41,29 @@ public class MqttUtil {
 	public static final String DATA_FILE = ".opts";
 	private static Properties pro;
 	private static long mLastLookupTime = 0;
-
+	private static String mPreviosBroker = null;
+	
+	public static void setBroker(String broker) {
+		JSONObject brokerJson = new JSONObject();
+		if (!isEmpty(broker) && broker.startsWith("tcp://")) {
+			try {
+				brokerJson.put("test_broker", broker);
+				TEST_BROKER_URL = broker;
+				saveOpts(brokerJson, false);
+			} catch (JSONException e) {
+				System.err.println(e.toString());
+			}
+		} else if (isEmpty(broker)){
+			try {
+				brokerJson.put("test_broker", "");
+				TEST_BROKER_URL = null;
+			} catch (JSONException e) {
+				System.err.println(e.toString());
+			}
+			saveOpts(brokerJson, false);
+		}
+	}
+	
 	public static void register(JSONObject obj) {
 		pro = getOptsPro();
 		if (null != pro
@@ -80,7 +106,10 @@ public class MqttUtil {
 			// System.out.println(sb.toString());
 			JSONObject obj2 = new JSONObject(sb.toString());
 			obj2.put("a", obj.get("a"));
-			saveOpts(obj2);
+			if (!isEmpty(TEST_BROKER_URL)) {
+				obj2.put("test_broker", TEST_BROKER_URL);
+			}
+			saveOpts(obj2, true);
 			// return sb.toString();
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -99,29 +128,42 @@ public class MqttUtil {
 		}
 	}
 
-	private static void saveOpts(JSONObject obj) {
+	private static void saveOpts(JSONObject obj, boolean override) {
 		String fileDir = System.getProperty("user.dir");
 		File file = new File(fileDir, DATA_FILE);
+		if (!file.exists()) {
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		FileOutputStream fos = null;
+		FileInputStream fis = null;
 		try {
-			fos = new FileOutputStream(file);
 			Properties pro = new Properties();
+			if (!override) {
+				fis = new FileInputStream(file);
+				pro.load(fis);
+				fis.close();
+			}
 			Iterator it = obj.keys();
 			while (it.hasNext()) {
 				String key = (String) it.next();
 				String value = obj.getString(key);
 				pro.setProperty(key, value);
 			}
+			fos = new FileOutputStream(file);
 			pro.store(fos, " ");
 			fos.close();
 		} catch (Exception e) {
-
+			System.err.println(e.toString());
 		} finally {
 			try {
 				if (null != fos)
 					fos.close();
 			} catch (IOException e) {
-
+				System.err.println(e.toString());
 			}
 		}
 	}
@@ -162,7 +204,33 @@ public class MqttUtil {
 
 		}
 	}
+	
+	private static String getBrokerFromProperty() {
+		Reader fis = null;
+		try {
+			String file = System.getProperty("user.dir") + File.separator
+					+ DATA_FILE;
+			// File file = new File(fileDir, DATA_FILE);
+			fis = new FileReader(file);
+			Properties properties = new Properties();
+			properties.load(fis);
+			return properties.getProperty("test_broker");
 
+		} catch (Exception e) {
+			System.err.println(e.toString());
+			return null;
+		} finally {
+			if (null != fis) {
+				try {
+					fis.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+		}
+	}
+	
 	public static MqttConnectOptions getOpts() {
 		Properties pro = getOptsPro();
 		if (null != pro) {
@@ -223,6 +291,30 @@ public class MqttUtil {
 	}
 
 	public static String getBroker() {
+		String testBroker = getBrokerFromProperty();
+		if (!isEmpty(testBroker)) {
+			String customPort = "1883";
+			String conUrl = testBroker;
+			
+			int endPos = testBroker.indexOf(":", "tcp://".length());
+            if (endPos == -1) {
+                endPos = testBroker.length();
+            }
+            String hostOrIp = testBroker.substring("tcp://".length(), endPos);
+            if (endPos + 1 < testBroker.length()) {
+                customPort = testBroker.substring(endPos + 1, testBroker.length());
+            }
+            if (!CommonUtil.validateIp(hostOrIp)) {
+                hostOrIp = CommonUtil.hostToIp(hostOrIp);
+                if (!CommonUtil.isEmpty(hostOrIp)) {
+                    conUrl = new StringBuilder().append("tcp://")
+                                                    .append(hostOrIp)
+                                                    .append(":")
+                                                    .append(customPort).toString();
+                }
+            }
+            return conUrl;
+		}
 		String broker = lookup();
 		if (!isEmpty(broker))
 			return broker;
@@ -343,10 +435,9 @@ public class MqttUtil {
 	}
 
 	public static String lookup() {
-		// if (Math.abs(System.currentTimeMillis() - mLastLookupTime) < 10 * 60
-		// * 1000) {
-		// return null;
-		// }
+		 if (Math.abs(System.currentTimeMillis() - mLastLookupTime) < 10 * 60* 1000) {
+			 return mPreviosBroker;
+		 }
 		try {
 			JSONObject ticket = new JSONObject();
 			Properties pro = getOptsPro();
@@ -365,13 +456,18 @@ public class MqttUtil {
 			}
 			String ticketInfo = doTcpJSON2(ticketIp, TCP_TICKET_PORT,
 					ticket.toString());
-			System.err.println("ticket info = " + ticketInfo);
 			JSONObject result = new JSONObject(ticketInfo);
-			String ip = result.getString("c");
-			return ip;
+			mPreviosBroker = result.getString("c");
+			mLastLookupTime = System.currentTimeMillis();
+			return mPreviosBroker;
 
 		} catch (Exception e) {
 			return null;
 		}
 	}
+	
+	public static void resetLastLookupTime() {
+		mLastLookupTime = 0;
+	}
+	
 }

@@ -2,6 +2,7 @@ package io.yunba.java.util;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.regex.Pattern;
 
 public class CommonUtil {
 	private final static String HEX = "0123456789ABCDEF";
@@ -48,4 +49,11 @@ public class CommonUtil {
 
 	    return builder.toString();
 	}
+    
+	private static final Pattern PATTERN = Pattern.compile(
+            "^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
+
+    public static boolean validateIp(final String ip) {
+        return PATTERN.matcher(ip).matches();
+    }
 }
