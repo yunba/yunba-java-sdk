@@ -330,6 +330,23 @@ public class YunBaManager {
 		publishByAlias(alias, message, mqttAction);
 	}
 
+	public static void publish2ToAlias(String alias, String message, JSONObject opts,
+			final IMqttActionListener mqttAction) {
+		if (!isValidAlias(alias)) {
+			if (null != mqttAction) {
+				executor.execute(new Runnable() {
+					public void run() {
+						mqttAction.onFailure(null, new MqttException(
+								MqttException.REASON_CODE_INVALID_TOPIC));
+					}
+				});
+			}
+			return;
+		}
+		publishByAlias(alias, message, mqttAction);
+		publish2("yta/" + alias, message, opts, mqttAction);
+	}
+	
 	private static void publishByAlias(String alias, String message,
 			IMqttActionListener mqttAction) {
 		publish(",yta/" + alias, message, 1, mqttAction);

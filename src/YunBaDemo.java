@@ -180,6 +180,21 @@ public class YunBaDemo {
 				System.out.println(exception.toString());
 			}
 		});
+		
+		YunBaManager.publish2ToAlias(ALIAS, "publish2ToAlias message",optsJson, new IMqttActionListener() {
+			
+			@Override
+			public void onSuccess(IMqttToken asyncActionToken) {
+				// TODO Auto-generated method stub
+				System.out.println("publish2ToAlias success");
+			}
+			
+			@Override
+			public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+				// TODO Auto-generated method stub
+				System.out.println(exception.toString());
+			}
+		});
 
 ////		// 查询当前用户订阅的频道列表
 //		YunBaManager.getTopicList("java_alias", new IMqttActionListener() {
