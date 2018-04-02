@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.MqttException;
@@ -343,8 +344,18 @@ public class YunBaManager {
 			}
 			return;
 		}
-		publishByAlias(alias, message, mqttAction);
-		publish2("yta/" + alias, message, opts, mqttAction);
+		int qos = 1;
+		if (opts.has("qos")) {
+			try {
+				qos = opts.getInt("qos");
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
+		MQTTMessage cache = new MQTTMessage(MQTTMessage.TYPE_EXPAND, ",yta/" + alias, message, qos, 
+				opts, -1, mqttAction);
+		cache.EXPAND_COMMNAD = MqttExpand.CMD_PUBLISH;
+		mMqttStack.addMQTTMessage(cache);
 	}
 	
 	private static void publishByAlias(String alias, String message,

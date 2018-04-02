@@ -604,7 +604,7 @@ public class MQTTStack {
 		public void publish(final MQTTMessage msg) {
 			final TimerTask timeoutTask = getTimeOutTask(
 					HANDLER_PUBLIC_TIMEOUT, msg);
-			if (timeoutTask != null) {
+			if (timeoutTask != null && msg.qos != 0) {
 				mTimer.schedule(timeoutTask, CALLBACK_TIMEOUT);
 			}
 			try {
@@ -676,7 +676,9 @@ public class MQTTStack {
 		public void expand(MQTTMessage msg) {
 			final TimerTask timeoutTask = getExpandTimeOutTask(msg);
 			final IMqttActionListener originCallback = msg.callback;
-			mTimer.schedule(timeoutTask, CALLBACK_TIMEOUT);
+			if (msg.qos != 0) {
+				mTimer.schedule(timeoutTask, CALLBACK_TIMEOUT);
+			}
 			try {
 				mMqttClient.expand(msg, new IMqttActionListener() {
 					
